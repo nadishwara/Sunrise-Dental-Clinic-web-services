@@ -20,6 +20,13 @@ public class LoginServlet extends HttpServlet {
         String email = request.getParameter("email");
         String password = request.getParameter("password");
 
+        if (email == null || email.trim().isEmpty() || password == null || password.trim().isEmpty()) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST); //400
+            response.getWriter().write("{\"status\": \"error\", \"message\": \"Email and password are required fields.\"}");
+            return;
+        }
+        email = email.trim();
+
         User user = userDAO.authenticateUser(email, password);
         response.setContentType("application/json");
         if (user != null) {
@@ -28,10 +35,13 @@ public class LoginServlet extends HttpServlet {
             session.setAttribute("role", user.getRole());
 
             response.setStatus(HttpServletResponse.SC_OK);
-            response.getWriter().write("{\"message\":  \"Login successful\", \"role\"" + user.getRole() + "\"}");
+            response.getWriter().write(String.format(
+                    "{\"status\": \"success\", \"message\": \"Login successful\", \"data\": {\"userId\": %d, \"username\": \"%s\", \"role\": \"%s\"}}",
+                    user.getUserId(), user.getUsername(), user.getRole()
+            )); //200
         } else {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.getWriter().write("{\\\"error\\\": \\\"Invalid email or password\\\"}");
+            response.getWriter().write("{\"status\": \"error\", \"message\": \"Invalid email or password. Please try again.\"}");
         }
     }
 }
