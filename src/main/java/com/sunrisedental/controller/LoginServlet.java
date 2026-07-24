@@ -29,16 +29,26 @@ public class LoginServlet extends HttpServlet {
 
         User user = userDAO.authenticateUser(email, password);
         response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
         if (user != null) {
             HttpSession session = request.getSession();
             session.setAttribute("user", user);
+            session.setAttribute("userId", user.getUserId());
             session.setAttribute("role", user.getRole());
 
+            if (user.getStaffId() != 0) {
+                session.setAttribute("staffId", user.getStaffId());
+            }
+
             response.setStatus(HttpServletResponse.SC_OK);
-            response.getWriter().write(String.format(
-                    "{\"status\": \"success\", \"message\": \"Login successful\", \"data\": {\"userId\": %d, \"username\": \"%s\", \"role\": \"%s\"}}",
-                    user.getUserId(), user.getUsername(), user.getRole()
-            )); //200
+            String jsonResponse = String.format(
+                    "{\"status\": \"success\", \"message\": \"Login successful\", \"data\": {\"userId\": %d, \"username\": \"%s\", \"role\": \"%s\", \"staffId\": %s}}",
+                    user.getUserId(),
+                    user.getUsername(),
+                    user.getRole(),
+                    (user.getStaffId() > 0 ? String.valueOf(user.getStaffId()) : "null")
+            ); //200
+            response.getWriter().write(jsonResponse);
         } else {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.getWriter().write("{\"status\": \"error\", \"message\": \"Invalid email or password. Please try again.\"}");

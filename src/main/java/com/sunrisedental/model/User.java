@@ -6,6 +6,8 @@ public class User {
     private String email;
     private String password;
     private String role;
+    private int staffId;
+    private String customId;
 
     public User() {}
 
@@ -40,4 +42,10 @@ public class User {
 
     public String getRole() {return role;}
     public void setRole(String role) {this.role = role;}
+
+    public int getStaffId() {return staffId;}
+    public void setStaffId(int staffId) {this.staffId =staffId;}
+
+    public String getCustomId() {return customId;}
+    public void setCustomId(String customId) { this.customId=customId;}
 }
