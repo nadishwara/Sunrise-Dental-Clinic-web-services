@@ -18,7 +18,7 @@ public class StaffDAO {
     public boolean registerStaff(User user, Staff staff) {
         String insertUserSql = "INSERT INTO users (username, email, password_hash, role, custom_id) VALUES (?, ?, ?, ?, ?)";
         String updateCustomIdSql = "UPDATE users SET custom_id = ? WHERE user_id = ?";
-        String insertStaffSql = "INSERT INTO staff (user_id, full_name, contact_no, specialization) VALUES (?, ?, ?, ?)";
+        String insertStaffSql = "INSERT INTO staff (user_id, custom_staff_id, full_name, contact_no, specialization) VALUES (?, ?, ?, ?, ?)";
         Connection conn = null;
         try {
             conn = DatabaseConnection.getInstance().getConnection();
@@ -55,9 +55,10 @@ public class StaffDAO {
             }
             try (PreparedStatement staffStmt = conn.prepareStatement(insertStaffSql)){
                 staffStmt.setInt(1, generatedUserId);
-                staffStmt.setString(2, staff.getFullName());
-                staffStmt.setString(3, staff.getContactNo());
-                staffStmt.setString(4, staff.getSpecialization());
+                staffStmt.setString(2, customId);
+                staffStmt.setString(3, staff.getFullName());
+                staffStmt.setString(4, staff.getContactNo());
+                staffStmt.setString(5, staff.getSpecialization());
 
                 staffStmt.executeUpdate();
             }
