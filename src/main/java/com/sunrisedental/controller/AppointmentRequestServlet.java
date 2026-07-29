@@ -69,12 +69,50 @@ public class AppointmentRequestServlet extends HttpServlet {
         response.setCharacterEncoding("UTF-8");
 
         HttpSession session = request.getSession(false);
+
+        if (session == null) {
+            System.out.println("ERROR: Session is NULL!");
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 401
+            response.getWriter().write("{\"status\":\"error\", \"message\":\"Unauthorized: No active session.\"}");
+            return;
+        }
+
         User user = (User) session.getAttribute("user");
+        Integer userId = (Integer) session.getAttribute("userId");
+
+        System.out.println("Session exists ID: " + session.getId());
+        System.out.println("User in session: " + user);
+
+        if (user == null && userId == null) {
+            System.out.println("ERROR: User attribute is NOT set in session!");
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.getWriter().write("{\"status\":\"error\", \"message\":\"Unauthorized: User not logged in.\"}");
+            return;
+        }
+        User user1 = (User) session.getAttribute("user");
+        System.out.println("SUCCESS: User logged in as ID: " + user.getUserId());
 
         List<AppointmentRequest> requests = appointmentDAO.getRequestsByPatientId(user.getUserId());
+        StringBuilder jsonBuilder = new StringBuilder();
+        jsonBuilder.append("{\"status\": \"success\", \"data\": [");
+
+        for (int i = 0; i< requests.size(); i++){
+            AppointmentRequest req = requests.get(i);
+
+            jsonBuilder.append("{")
+                    .append("\"requestId\":").append(req.getRequestId()).append(",")
+                    .append("\"preferredDate\":\"").append(req.getPreferredDate()).append("\",")
+                    .append("\"preferredTimeSlot\":\"").append(req.getPreferredTimeSlot()).append("\",")
+                    .append("\"notes\":\"").append(req.getNotes() != null ? req.getNotes().replace("\"", "\\\"") : "").append("\",")
+                    .append("\"status\":\"").append(req.getStatus()).append("\"")
+                    .append("}");
+            if (i< requests.size()-1) {
+                jsonBuilder.append(",");
+            }
+        }
+        jsonBuilder.append("]}");
 
         response.setStatus(HttpServletResponse.SC_OK);
-        // use JSON Parsing library
-        response.getWriter().write(String.format("{\"status\": \"success\", \"count\": %d}", requests.size()));
+        response.getWriter().write(jsonBuilder.toString());
     }
 }

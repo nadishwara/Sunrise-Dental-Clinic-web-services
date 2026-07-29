@@ -9,7 +9,9 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.json.JSONObject;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
@@ -20,7 +22,7 @@ public class RegisterServlet extends HttpServlet {
 
     private final UserDAO userDAO = new UserDAO();
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@(.+)$");
-    private static final List<String> VALID_ROLES = Arrays.asList("ADMIN", "RECEPTIONIST", "DENTIST", "PATIENT");
+//    private static final List<String> VALID_ROLES = Arrays.asList("ADMIN", "RECEPTIONIST", "DENTIST", "PATIENT");
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
@@ -29,20 +31,35 @@ public class RegisterServlet extends HttpServlet {
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
 
-        String username = request.getParameter("username");
-        String email = request.getParameter("email");
-        String password = request.getParameter("password");
-        String role = request.getParameter("role");
+        StringBuilder sb = new StringBuilder();
+        BufferedReader reader = request.getReader();
+        String line;
+        while ((line = reader.readLine()) !=null) {
+            sb.append(line);
+        }
 
-        // 1. Null or Empty Check
-        if (isNullOrEmpty(username) || isNullOrEmpty(email) || isNullOrEmpty(password) || isNullOrEmpty(role)) {
-            sendErrorResponse(response, HttpServletResponse.SC_BAD_REQUEST, "All fields (username, email, password, role) are required.");
+        String username = null;
+        String email = null;
+        String password = null;
+
+        try {
+            JSONObject json = new JSONObject(sb.toString());
+            username = json.optString("username", null);
+            email = json.optString("email", null);
+            password = json.optString("password", null);
+        } catch (Exception e) {
+            sendErrorResponse(response, HttpServletResponse.SC_BAD_REQUEST, "Invalid JSON body format.");
+            return;
+        }
+
+            // 1. Null or Empty Check
+        if (isNullOrEmpty(username) || isNullOrEmpty(email) || isNullOrEmpty(password)) {
+            sendErrorResponse(response, HttpServletResponse.SC_BAD_REQUEST, "Username, email, and password are required.");
             return;
         }
 
         username = username.trim();
         email = email.trim();
-        role = role.trim().toUpperCase();
 
         if (!EMAIL_PATTERN.matcher(email).matches()) {
             sendErrorResponse(response, HttpServletResponse.SC_BAD_REQUEST, "Invalid email address format.");
@@ -54,21 +71,23 @@ public class RegisterServlet extends HttpServlet {
             return;
         }
 
-        if (!VALID_ROLES.contains(role)) {
-            sendErrorResponse(response, HttpServletResponse.SC_BAD_REQUEST, "Invalid role. Allowed roles: ADMIN, RECEPTIONIST, DENTIST, PATIENT.");
-            return;
-        }
+
+
+
+        String defaultRole = "PATIENT";
+        String defaultStatus = "ACTIVE";
 
         String hashedPassword = BCrypt.withDefaults().hashToString(12, password.toCharArray());
-        // Create User & Save to DB
-        User newUser = new User(username, email, hashedPassword, role);
+
+        // Create User Object with Default Role and Status
+        User newUser = new User(username, email, hashedPassword, defaultRole, defaultStatus);
         boolean isRegistered = userDAO.registerUser(newUser);
 
         if (isRegistered) {
-            response.setStatus(HttpServletResponse.SC_CREATED); // HTTP 201
+            response.setStatus(HttpServletResponse.SC_CREATED); // 201 Created
             response.getWriter().write(String.format(
-                    "{\"status\": \"success\", \"message\": \"User registered successfully!\", \"data\": {\"username\": \"%s\", \"email\": \"%s\", \"role\": \"%s\"}}",
-                    username, email, role
+                    "{\"status\": \"success\", \"message\": \"Patient registered successfully!\", \"data\": {\"username\": \"%s\", \"email\": \"%s\", \"role\": \"%s\"}}",
+                    escapeJson(username), escapeJson(email), defaultRole
             ));
         } else {
             sendErrorResponse(response, HttpServletResponse.SC_BAD_REQUEST, "Registration failed. Email or Username already exists.");
@@ -81,6 +100,11 @@ public class RegisterServlet extends HttpServlet {
 
     private void sendErrorResponse(HttpServletResponse response, int statusCode, String message) throws IOException {
         response.setStatus(statusCode);
-        response.getWriter().write(String.format("{\"status\": \"error\", \"message\": \"%s\"}", message));
+        response.getWriter().write(String.format("{\"status\": \"error\", \"message\": \"%s\"}", escapeJson(message)));
+    }
+
+    private String escapeJson(String str) {
+        if (str == null) return "";
+        return str.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 }

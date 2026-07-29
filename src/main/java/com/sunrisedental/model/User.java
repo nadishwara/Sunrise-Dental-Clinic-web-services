@@ -6,6 +6,7 @@ public class User {
     private String email;
     private String password;
     private String role;
+    private String status;
     private int staffId;
     private String customId;
 
@@ -20,12 +21,21 @@ public class User {
         this.role = role;
     }
 
-    public User(int userId, String username, String email, String password, String role) {
+    public User(String username, String email, String password, String role, String status) {
+        this.username = username;
+        this.email = email;
+        this.password = password;
+        this.role = role;
+        this.status = status;
+    }
+
+    public User(int userId, String username, String email, String password, String role, String status) {
         this.userId = userId;
         this.username = username;
         this.email = email;
         this.password = password;
         this.role = role;
+        this.status = status;
     }
 
     public int getUserId() {return userId;}
@@ -42,6 +52,9 @@ public class User {
 
     public String getRole() {return role;}
     public void setRole(String role) {this.role = role;}
+
+    public String getStatus() {return  status;}
+    public void setStatus(String status) {this.status = status;}
 
     public int getStaffId() {return staffId;}
     public void setStaffId(int staffId) {this.staffId =staffId;}

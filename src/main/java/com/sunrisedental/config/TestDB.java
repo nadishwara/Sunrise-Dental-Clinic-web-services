@@ -9,12 +9,12 @@ public class TestDB {
         try {
             Connection conn = DatabaseConnection.getInstance().getConnection();
             if (conn != null && !conn.isClosed()) {
-                System.out.println("🎉 SUCCESS: Database Connected Successfully!");
+                System.out.println("SUCCESS: Database Connected Successfully!");
             } else {
-                System.out.println("🔴 FAILED: Connection object is null or closed.");
+                System.out.println("FAILED: Connection object is null or closed.");
             }
         } catch (Exception e) {
-            System.err.println("❌ ERROR: Connection failed with exception!");
+            System.err.println("ERROR: Connection failed with exception!");
             e.printStackTrace();
         }
     }
