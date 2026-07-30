@@ -63,7 +63,7 @@ public class StaffDAO {
                 staffStmt.executeUpdate();
             }
 
-            conn.commit(); // Commit Transaction
+            conn.commit();
             user.setCustomId(customId);
             return true;
 

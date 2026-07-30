@@ -31,6 +31,8 @@ public class RegisterServlet extends HttpServlet {
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
 
+        String pathInfo = request.getPathInfo();
+
         StringBuilder sb = new StringBuilder();
         BufferedReader reader = request.getReader();
         String line;

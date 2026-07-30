@@ -17,12 +17,11 @@ public class UserDAO {
         Connection conn = null;
         try {
             conn = DatabaseConnection.getInstance().getConnection();
-            conn.setAutoCommit(false); // Start Transaction
+            conn.setAutoCommit(false);
 
             int generatedUserId = -1;
             String tempCustomId = "TEMP-" + UUID.randomUUID().toString().substring(0, 8);
 
-            //Insert temporary custom_id
             try (PreparedStatement stmt = conn.prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS)) {
                 stmt.setString(1, user.getUsername());
                 stmt.setString(2, user.getEmail());
@@ -48,10 +47,8 @@ public class UserDAO {
                 return false;
             }
 
-            // Generate final Custom ID (e.g., DEN001, PTN002)
             String customId = IdGenerator.generateCustomId(user.getRole(), generatedUserId);
 
-            // Update with formatted Custom ID
             try (PreparedStatement updateStmt = conn.prepareStatement(updateCustomIdSql)) {
                 updateStmt.setString(1, customId);
                 updateStmt.setInt(2, generatedUserId);

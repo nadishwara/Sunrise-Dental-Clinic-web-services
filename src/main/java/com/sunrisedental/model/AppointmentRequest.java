@@ -10,6 +10,11 @@ public class AppointmentRequest {
     private String notes;
     private String status;
     private String createdAt;
+
+    private String patientName;
+    private String contactNo;
+    private String whatsappNo;
+    private String patientEmail;
 //    Default Constructor
     public AppointmentRequest() {}
 
@@ -28,7 +33,6 @@ public class AppointmentRequest {
     public int getRequestId() {
         return requestId;
     }
-
     public void setRequestId(int requestId) {
         this.requestId = requestId;
     }
@@ -36,7 +40,6 @@ public class AppointmentRequest {
     public int getPatientUserId() {
         return patientUserId;
     }
-
     public void setPatientUserId(int patientUserId) {
         this.patientUserId = patientUserId;
     }
@@ -44,7 +47,6 @@ public class AppointmentRequest {
     public String getPatientCustomId() {
         return patientCustomId;
     }
-
     public void setPatientCustomId(String patientCustomId) {
         this.patientCustomId = patientCustomId;
     }
@@ -52,7 +54,6 @@ public class AppointmentRequest {
     public String getPreferredDate() {
         return preferredDate;
     }
-
     public void setPreferredDate(String preferredDate) {
         this.preferredDate = preferredDate;
     }
@@ -60,7 +61,6 @@ public class AppointmentRequest {
     public String getPreferredTimeSlot() {
         return preferredTimeSlot;
     }
-
     public void setPreferredTimeSlot(String preferredTimeSlot) {
         this.preferredTimeSlot = preferredTimeSlot;
     }
@@ -68,7 +68,6 @@ public class AppointmentRequest {
     public Integer getPreferredDentistId() {
         return preferredDentistId;
     }
-
     public void setPreferredDentistId(Integer preferredDentistId) {
         this.preferredDentistId = preferredDentistId;
     }
@@ -76,7 +75,6 @@ public class AppointmentRequest {
     public String getNotes() {
         return notes;
     }
-
     public void setNotes(String notes) {
         this.notes = notes;
     }
@@ -84,7 +82,6 @@ public class AppointmentRequest {
     public String getStatus() {
         return status;
     }
-
     public void setStatus(String status) {
         this.status = status;
     }
@@ -92,8 +89,19 @@ public class AppointmentRequest {
     public String getCreatedAt() {
         return createdAt;
     }
-
     public void setCreatedAt(String createdAt) {
         this.createdAt = createdAt;
     }
+
+    public String getPatientName() { return patientName; }
+    public void setPatientName(String patientName) { this.patientName = patientName; }
+
+    public String getContactNo() { return contactNo; }
+    public void setContactNo(String contactNo) { this.contactNo = contactNo; }
+
+    public String getWhatsappNo() { return whatsappNo; }
+    public void setWhatsappNo(String whatsappNo) { this.whatsappNo = whatsappNo; }
+
+    public String getPatientEmail() { return patientEmail; }
+    public void setPatientEmail(String patientEmail) { this.patientEmail = patientEmail; }
 }

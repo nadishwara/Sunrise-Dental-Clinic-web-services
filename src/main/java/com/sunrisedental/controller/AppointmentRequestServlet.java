@@ -25,12 +25,21 @@ public class AppointmentRequestServlet extends HttpServlet {
         response.setCharacterEncoding("UTF-8");
 
         HttpSession session = request.getSession(false);
+
+        if (session == null || session.getAttribute("user") == null) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.getWriter().write("{\"status\":\"error\", \"message\":\"Unauthorized: Please log in.\"}");
+            return;
+        }
+
         User user = (User) session.getAttribute("user");
 
         String preferredDate = request.getParameter("preferredDate");
         String preferredTimeSlot = request.getParameter("preferredTimeSlot");
         String notes = request.getParameter("notes");
         String dentistIdStr = request.getParameter("preferredDentistId");
+        String contactNo = request.getParameter("contactNo");
+        String whatsappNo = request.getParameter("whatsappNo");
 
         if (preferredDate == null || preferredDate.trim().isEmpty()) {
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
@@ -49,6 +58,8 @@ public class AppointmentRequestServlet extends HttpServlet {
         appRequest.setPreferredDentistId(preferredDentistId);
         appRequest.setNotes(notes);
         appRequest.setStatus("PENDING");
+        appRequest.setContactNo(contactNo);
+        appRequest.setWhatsappNo(whatsappNo);
 
         boolean isCreated = appointmentDAO.createAppointmentRequest(appRequest);
 
@@ -71,42 +82,38 @@ public class AppointmentRequestServlet extends HttpServlet {
         HttpSession session = request.getSession(false);
 
         if (session == null) {
-            System.out.println("ERROR: Session is NULL!");
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 401
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.getWriter().write("{\"status\":\"error\", \"message\":\"Unauthorized: No active session.\"}");
             return;
         }
 
         User user = (User) session.getAttribute("user");
-        Integer userId = (Integer) session.getAttribute("userId");
 
-        System.out.println("Session exists ID: " + session.getId());
-        System.out.println("User in session: " + user);
-
-        if (user == null && userId == null) {
-            System.out.println("ERROR: User attribute is NOT set in session!");
+        if (user == null) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.getWriter().write("{\"status\":\"error\", \"message\":\"Unauthorized: User not logged in.\"}");
             return;
         }
-        User user1 = (User) session.getAttribute("user");
-        System.out.println("SUCCESS: User logged in as ID: " + user.getUserId());
 
         List<AppointmentRequest> requests = appointmentDAO.getRequestsByPatientId(user.getUserId());
+
         StringBuilder jsonBuilder = new StringBuilder();
         jsonBuilder.append("{\"status\": \"success\", \"data\": [");
 
-        for (int i = 0; i< requests.size(); i++){
+        for (int i = 0; i < requests.size(); i++) {
             AppointmentRequest req = requests.get(i);
 
             jsonBuilder.append("{")
                     .append("\"requestId\":").append(req.getRequestId()).append(",")
-                    .append("\"preferredDate\":\"").append(req.getPreferredDate()).append("\",")
-                    .append("\"preferredTimeSlot\":\"").append(req.getPreferredTimeSlot()).append("\",")
-                    .append("\"notes\":\"").append(req.getNotes() != null ? req.getNotes().replace("\"", "\\\"") : "").append("\",")
-                    .append("\"status\":\"").append(req.getStatus()).append("\"")
+                    .append("\"preferredDate\":\"").append(escapeJson(req.getPreferredDate())).append("\",")
+                    .append("\"preferredTimeSlot\":\"").append(escapeJson(req.getPreferredTimeSlot())).append("\",")
+                    .append("\"notes\":\"").append(escapeJson(req.getNotes())).append("\",")
+                    .append("\"status\":\"").append(escapeJson(req.getStatus())).append("\",")
+                    .append("\"contactNo\":\"").append(escapeJson(req.getContactNo())).append("\",")
+                    .append("\"whatsappNo\":\"").append(escapeJson(req.getWhatsappNo())).append("\"")
                     .append("}");
-            if (i< requests.size()-1) {
+
+            if (i < requests.size() - 1) {
                 jsonBuilder.append(",");
             }
         }
@@ -114,5 +121,18 @@ public class AppointmentRequestServlet extends HttpServlet {
 
         response.setStatus(HttpServletResponse.SC_OK);
         response.getWriter().write(jsonBuilder.toString());
+    }
+
+    private String escapeJson(String input) {
+        if (input == null) {
+            return "";
+        }
+        return input.replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\b", "\\b")
+                .replace("\f", "\\f")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t");
     }
 }

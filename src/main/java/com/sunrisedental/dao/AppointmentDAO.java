@@ -1,6 +1,5 @@
 package com.sunrisedental.dao;
 
-
 import com.sunrisedental.config.DatabaseConnection;
 import com.sunrisedental.model.Appointment;
 import com.sunrisedental.model.AppointmentRequest;
@@ -11,39 +10,66 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class AppointmentDAO {
-//    request appointment
+
     public boolean createAppointmentRequest(AppointmentRequest request) {
-        String sql = "INSERT INTO appointment_requests (patient_user_id, patient_custom_id, preferred_date, preferred_time_slot, preferred_dentist_id, notes, status) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        String updateUserSql = "UPDATE users SET contact_no = ?, whatsapp_no = ? WHERE user_id = ?";
+        String insertReqSql = "INSERT INTO appointment_requests (patient_user_id, patient_custom_id, preferred_date, preferred_time_slot, preferred_dentist_id, notes, status) VALUES (?, ?, ?, ?, ?, ?, ?)";
 
-        try (Connection conn = DatabaseConnection.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+        Connection conn = null;
+        try {
+            conn = DatabaseConnection.getInstance().getConnection();
+            conn.setAutoCommit(false);
 
-            stmt.setInt(1, request.getPatientUserId());
-            stmt.setString(2, request.getPatientCustomId());
-            stmt.setString(3, request.getPreferredDate());
-            stmt.setString(4, request.getPreferredTimeSlot());
-
-            if (request.getPreferredDentistId() != null) {
-                stmt.setInt(5, request.getPreferredDentistId());
-            } else {
-                stmt.setNull(5, Types.INTEGER);
+            try (PreparedStatement updateUserStmt = conn.prepareStatement(updateUserSql)) {
+                updateUserStmt.setString(1, request.getContactNo());
+                updateUserStmt.setString(2, request.getWhatsappNo());
+                updateUserStmt.setInt(3, request.getPatientUserId());
+                updateUserStmt.executeUpdate();
             }
 
-            stmt.setString(6, request.getNotes());
-            stmt.setString(7, request.getStatus()); // pending
+            try (PreparedStatement insertReqStmt = conn.prepareStatement(insertReqSql)) {
+                insertReqStmt.setInt(1, request.getPatientUserId());
+                insertReqStmt.setString(2, request.getPatientCustomId());
+                insertReqStmt.setString(3, request.getPreferredDate());
+                insertReqStmt.setString(4, request.getPreferredTimeSlot());
 
-            return stmt.executeUpdate() > 0;
+                if (request.getPreferredDentistId() != null) {
+                    insertReqStmt.setInt(5, request.getPreferredDentistId());
+                } else {
+                    insertReqStmt.setNull(5, Types.INTEGER);
+                }
+
+                insertReqStmt.setString(6, request.getNotes());
+                insertReqStmt.setString(7, request.getStatus());
+
+                insertReqStmt.executeUpdate();
+            }
+
+            conn.commit();
+            return true;
 
         } catch (SQLException e) {
             System.err.println("Create Appointment Request Error: " + e.getMessage());
             e.printStackTrace();
+            if (conn != null) {
+                try { conn.rollback(); } catch (SQLException ex) { ex.printStackTrace(); }
+            }
             return false;
+        } finally {
+            if (conn != null) {
+                try { conn.setAutoCommit(true); } catch (SQLException ex) { ex.printStackTrace(); }
+            }
         }
     }
 
     public List<AppointmentRequest> getRequestsByPatientId(int patientUserId) {
         List<AppointmentRequest> requests = new ArrayList<>();
-        String sql = "SELECT * FROM appointment_requests WHERE patient_user_id = ? ORDER BY created_at DESC";
+        String sql = "SELECT ar.request_id, ar.patient_user_id, ar.patient_custom_id, " +
+                "u.username AS patient_name, u.email AS patient_email, u.contact_no, u.whatsapp_no, " +
+                "ar.preferred_date, ar.preferred_time_slot, ar.preferred_dentist_id, ar.notes, ar.status, ar.created_at " +
+                "FROM appointment_requests ar " +
+                "LEFT JOIN users u ON ar.patient_user_id = u.user_id " +
+                "WHERE ar.patient_user_id = ? ORDER BY ar.created_at DESC";
 
         try (Connection conn = DatabaseConnection.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -60,6 +86,15 @@ public class AppointmentDAO {
                     req.setPreferredDentistId(rs.getObject("preferred_dentist_id") != null ? rs.getInt("preferred_dentist_id") : null);
                     req.setNotes(rs.getString("notes"));
                     req.setStatus(rs.getString("status"));
+
+                    req.setPatientName(rs.getString("patient_name"));
+                    req.setPatientEmail(rs.getString("patient_email"));
+
+                    String phone = rs.getString("contact_no");
+                    String whatsapp = rs.getString("whatsapp_no");
+                    req.setContactNo(phone != null ? phone : "N/A");
+                    req.setWhatsappNo(whatsapp != null ? whatsapp : "N/A");
+
                     requests.add(req);
                 }
             }
@@ -70,7 +105,6 @@ public class AppointmentDAO {
         return requests;
     }
 
-//    block double booking
     public boolean isSlotAvailable(int dentistId, String date, String time) {
         String sql = "SELECT COUNT(*) FROM appointments WHERE dentist_id = ? AND appointment_date = ? AND appointment_time = ? AND status = 'SCHEDULED'";
 
@@ -83,7 +117,7 @@ public class AppointmentDAO {
 
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
-                    return rs.getInt(1) == 0; // Count value = 0 Slot should available.
+                    return rs.getInt(1) == 0;
                 }
             }
         } catch (SQLException e) {
@@ -93,7 +127,6 @@ public class AppointmentDAO {
         return false;
     }
 
-    // Transactional Appointment Booking execution (Appointments table Request status CONFIRMED)
     public String confirmAndBookAppointment(Appointment appointment) {
         String insertAppSql = "INSERT INTO appointments (custom_appointment_id, request_id, patient_id, dentist_id, receptionist_id, appointment_date, appointment_time, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         String updateAppCustomIdSql = "UPDATE appointments SET custom_appointment_id = ? WHERE appointment_id = ?";
@@ -104,7 +137,6 @@ public class AppointmentDAO {
             conn = DatabaseConnection.getInstance().getConnection();
             conn.setAutoCommit(false);
 
-            // Insert appointments Record
             int generatedAppId = -1;
             try (PreparedStatement stmt = conn.prepareStatement(insertAppSql, Statement.RETURN_GENERATED_KEYS)) {
                 stmt.setString(1, "TEMP");
@@ -137,26 +169,95 @@ public class AppointmentDAO {
                 updateStmt.executeUpdate();
             }
 
-            // Step C: Update original request status to 'CONFIRMED'
             try (PreparedStatement updateReqStmt = conn.prepareStatement(updateRequestSql)) {
                 updateReqStmt.setInt(1, appointment.getRequestId());
                 updateReqStmt.executeUpdate();
             }
 
-            conn.commit(); // Save all DB updates
+            conn.commit();
             return customAppId;
 
         } catch (SQLException e) {
             System.err.println("Appointment Booking Transaction Error: " + e.getMessage());
             e.printStackTrace();
             if (conn != null) {
-                try { conn.rollback(); } catch (SQLException ex) { ex.printStackTrace(); }
+                try {
+                    conn.rollback();
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
+                }
             }
             return null;
         } finally {
             if (conn != null) {
-                try { conn.setAutoCommit(true); } catch (SQLException ex) { ex.printStackTrace(); }
+                try {
+                    conn.setAutoCommit(true);
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
+                }
             }
+        }
+    }
+
+    public List<AppointmentRequest> getAllAppointmentRequests() {
+        List<AppointmentRequest> requests = new ArrayList<>();
+
+        String sql = "SELECT ar.request_id, ar.patient_user_id, ar.patient_custom_id, u.username AS patient_name, u.email AS patient_email, u.contact_no, u.whatsapp_no,\n" +
+                "           ar.preferred_date, ar.preferred_time_slot, ar.preferred_dentist_id, s.full_name AS dentist_name, ar.notes, ar.status, ar.created_at\n" +
+                "    FROM appointment_requests ar\n" +
+                "    LEFT JOIN users u ON ar.patient_user_id = u.user_id LEFT JOIN staff s ON ar.preferred_dentist_id = s.user_id ORDER BY ar.created_at DESC";
+
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                AppointmentRequest req = new AppointmentRequest();
+                req.setRequestId(rs.getInt("request_id"));
+                req.setPatientUserId(rs.getInt("patient_user_id"));
+                req.setPatientCustomId(rs.getString("patient_custom_id"));
+                req.setPreferredDate(rs.getString("preferred_date"));
+                req.setPreferredTimeSlot(rs.getString("preferred_time_slot"));
+
+                int dentistId = rs.getInt("preferred_dentist_id");
+                if (rs.wasNull()) {
+                    req.setPreferredDentistId(null);
+                } else {
+                    req.setPreferredDentistId(dentistId);
+                }
+
+                req.setNotes(rs.getString("notes"));
+                req.setStatus(rs.getString("status"));
+                req.setPatientName(rs.getString("patient_name"));
+                req.setPatientEmail(rs.getString("patient_email"));
+
+                String phone = rs.getString("contact_no");
+                String whatsapp = rs.getString("whatsapp_no");
+
+                req.setContactNo(phone != null ? phone : "N/A"); // Fixed duplicate
+                req.setWhatsappNo(whatsapp != null ? whatsapp : "N/A");
+
+                requests.add(req);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return requests;
+    }
+
+    public boolean updateAppointmentRequestStatus(int requestId, String status) {
+        String sql = "UPDATE appointment_requests SET status = ? WHERE request_id = ?";
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, status);
+            ps.setInt(2, requestId);
+
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
         }
     }
 }
