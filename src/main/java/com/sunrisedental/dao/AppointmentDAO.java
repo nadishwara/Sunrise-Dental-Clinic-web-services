@@ -260,4 +260,88 @@ public class AppointmentDAO {
             return false;
         }
     }
+    public List<Appointment> getAllAppointmentData() {
+        List<Appointment> list = new ArrayList<>();
+
+        String sql = "SELECT a.appointment_id, a.custom_appointment_id, a.request_id, " +
+                "a.appointment_date, a.appointment_time, a.status, a.created_at, " +
+                "a.patient_id, u_p.username AS patient_name, u_p.contact_no AS patient_contact, " +
+                "a.dentist_id, u_d.username AS dentist_name, " +
+                "a.receptionist_id, u_r.username AS receptionist_name " +
+                "FROM appointments a " +
+                "LEFT JOIN users u_p ON a.patient_id = u_p.user_id " +
+                "LEFT JOIN users u_d ON a.dentist_id = u_d.user_id " +
+                "LEFT JOIN users u_r ON a.receptionist_id = u_r.user_id " +
+                "ORDER BY a.appointment_date DESC, a.appointment_time DESC";
+
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                Appointment app = new Appointment();
+                app.setAppointmentId(rs.getInt("appointment_id"));
+                app.setCustomAppointmentId(rs.getString("custom_appointment_id"));
+
+                int reqId = rs.getInt("request_id");
+                app.setRequestId(rs.wasNull() ? null : reqId);
+
+                app.setAppointmentDate(rs.getString("appointment_date"));
+                app.setAppointmentTime(rs.getString("appointment_time"));
+                app.setStatus(rs.getString("status"));
+                app.setCreatedAt(rs.getString("created_at"));
+
+                app.setPatientId(rs.getInt("patient_id"));
+                app.setPatientName(rs.getString("patient_name") != null ? rs.getString("patient_name") : "N/A");
+                app.setPatientContact(rs.getString("patient_contact") != null ? rs.getString("patient_contact") : "N/A");
+
+                app.setDentistId(rs.getInt("dentist_id"));
+                app.setDentistName(rs.getString("dentist_name") != null ? rs.getString("dentist_name") : "Unassigned");
+
+                app.setReceptionistId(rs.getInt("receptionist_id"));
+                app.setReceptionistName(rs.getString("receptionist_name") != null ? rs.getString("receptionist_name") : "System / Self");
+
+                list.add(app);
+            }
+        } catch (SQLException e) {
+            System.err.println("Get All Appointment Data Error: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    public boolean updateAppointment(Appointment appointment) {
+        String sql = "UPDATE appointments SET dentist_id = ?, appointment_date = ?, appointment_time = ?, status = ? WHERE appointment_id = ?";
+
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, appointment.getDentistId());
+            ps.setString(2, appointment.getAppointmentDate());
+            ps.setString(3, appointment.getAppointmentTime());
+            ps.setString(4, appointment.getStatus());
+            ps.setInt(5, appointment.getAppointmentId());
+
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Update Appointment Error: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public boolean deleteAppointment(int appointmentId) {
+        String sql = "DELETE FROM appointments WHERE appointment_id = ?";
+
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, appointmentId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Delete Appointment Error: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
 }

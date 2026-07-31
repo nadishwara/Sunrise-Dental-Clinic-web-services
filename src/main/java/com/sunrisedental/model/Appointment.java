@@ -12,6 +12,11 @@ public class Appointment {
     private String status;
     private String createdAt;
 
+    private String patientName;
+    private String patientContact;
+    private String dentistName;
+    private String receptionistName;
+
     public Appointment() {}
 
     public int getAppointmentId() { return appointmentId; }
@@ -37,6 +42,24 @@ public class Appointment {
 
     public String getAppointmentTime() { return appointmentTime;}
     public void setAppointmentTime(String appointmentTime) {this.appointmentTime = appointmentTime;}
+
+    public String getStatus() {return status;}
+    public void setStatus(String status) {this.status=status;}
+
+    public String getCreatedAt() {return createdAt;}
+    public void setCreatedAt(String createdAt) {this.createdAt = createdAt;}
+
+    public String getPatientName() { return patientName; }
+    public void setPatientName(String patientName) { this.patientName = patientName; }
+
+    public String getPatientContact() { return patientContact; }
+    public void setPatientContact(String patientContact) { this.patientContact = patientContact; }
+
+    public String getDentistName() { return dentistName; }
+    public void setDentistName(String dentistName) { this.dentistName = dentistName; }
+
+    public String getReceptionistName() { return receptionistName; }
+    public void setReceptionistName(String receptionistName) { this.receptionistName = receptionistName; }
 
     }
 
